@@ -29,13 +29,31 @@ private slots:
     void onConvertGray();
     void onRevertToOriginal();
     void onMirrorVertically();
+    void onTurn90Degrees();
+    void onTurn90DegreesAnti();
+
+    void onZoomIn();
+    void onZoomOut(double sx, double sy);
+
     void onMirrorHorizontally();
     void onQuantify(int num_shades);
+
+    void onBiasChange(int bias);
+    void onGainChange(int gain);
+    QImage applyGainAndBias (const QImage &source);
+
+    void onInvertImage();
+    void onEqualizeHistogram();
+    void onHistMatch();
+
+    void onApplyKernel(const QVector<double> &kernel);
+
 
     void salvarImagem();
 
 private:
     bool isGray = false;
+    bool fitToWindow = true;
     void criarMenus(); // Função auxiliar para manter o construtor limpo
     void setProcessedImage(QImage img);
 
@@ -52,5 +70,8 @@ private:
 
     // Ponteiro para a interface criada no Qt Designer
     Ui::MainWindow *ui;
+
+    int biasValue = 0;
+    int gainValue = 1;
 };
 #endif // MAINWINDOW_H
