@@ -198,59 +198,44 @@ QImage ImageProcessor::equalizeHistogram(const QImage &source){
     return resultado;
 }
 
-QVector<int> ImageProcessor::calculateEqualizationLUT(const QImage& source)
-{
-    int hist[256] = {0};
-    this->computeHistogram(source, hist);
-
-    long int cdf[256] = {0};
-    cdf[0] = hist[0];
-    for (int i = 1; i < 256; i++) {
-        cdf[i] = cdf[i-1] + hist[i];
-    }
-
-    long int cdf_min = 0;
-    for (int i = 0; i < 256; i++) {
-        if (cdf[i] > 0) {
-            cdf_min = cdf[i];
-            break;
-        }
-    }
-
-    QVector<int> lut(256);
-    long int totalPixels = source.width() * source.height();
-    if (totalPixels == cdf_min) {
-        for(int i=0; i<256; ++i) lut[i] = i;
-        return lut;
-    }
-
-    for (int i = 0; i < 256; i++) {
-        lut[i] = qRound( ( (double)(cdf[i] - cdf_min) / (totalPixels - cdf_min) ) * 255.0 );
-    }
-    return lut;
-}
 
 QImage ImageProcessor::equalizeColorHistogram(const QImage &source)
 {
-    if (source.isNull() || source.isGrayscale()) return source;
+    if (source.isNull() || source.isGrayscale()) {
+        return source;
+    }
 
-    QImage luminanceImage = this->tonsDeCinza(source); // Ou sua função convertToGrayscale
+    QImage luminanceImage = this->tonsDeCinza(source);
 
-    QVector<int> lut = calculateEqualizationLUT(luminanceImage);
+    int hist[256];
+    this->computeHistogram(luminanceImage, hist);
 
-    QImage resultado(source.size(), source.format());
-    for (int y = 0; y < source.height(); y++) {
-        for (int x = 0; x < source.width(); x++) {
-            QColor hslColor = source.pixelColor(x, y).toHsl();
+    int cdf[256];
+    this->cumulativeHistogram(hist, cdf);
+    this->cumulativeHistogramNormalized(cdf);
 
-            int originalLightness = hslColor.lightness();
-            int newLightness = lut[originalLightness];
+    QImage result(source.size(), source.format());
 
-            hslColor.setHsl(hslColor.hue(), hslColor.saturation(), newLightness);
-            resultado.setPixelColor(x, y, hslColor.toRgb());
+    int height = source.height();
+    int width = source.width();
+    int bytesPerPixel = source.depth() / 8;
+
+    const uchar *source_ptr = source.constBits();
+    uchar *result_ptr = result.bits();
+
+    long int total_bytes = width * height * bytesPerPixel;
+
+    for (long int i = 0; i < total_bytes; i += bytesPerPixel) {
+        result_ptr[i] = cdf[source_ptr[i]];
+        result_ptr[i + 1] = cdf[source_ptr[i + 1]];
+        result_ptr[i + 2] = cdf[source_ptr[i + 2]];
+
+        if (bytesPerPixel == 4) {
+            result_ptr[i + 3] = source_ptr[i + 3];
         }
     }
-    return resultado;
+
+    return result;
 }
 
 QImage ImageProcessor::biasChange(const QImage &source, int bias){
